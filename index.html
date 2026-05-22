@@ -3,72 +3,79 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dino Love Game 💙</title>
+<title>Dino Love Runner 💙</title>
 
 <style>
 body{
-  margin:0;
-  overflow:hidden;
-  font-family:'Courier New', monospace;
-  background:#000;
+ margin:0;
+ overflow:hidden;
+ font-family:'Segoe UI', sans-serif;
 }
 
 canvas{
-  display:block;
+ display:block;
 }
 
-/* Botones móviles */
+/* CONTROLES */
 .controls{
-  position:fixed;
-  bottom:20px;
-  width:100%;
-  display:flex;
-  justify-content:space-between;
-  padding:0 20px;
+ position:fixed;
+ bottom:20px;
+ width:100%;
+ display:flex;
+ justify-content:space-between;
+ padding:0 30px;
 }
 
-.btn{
-  width:70px;
-  height:70px;
-  border-radius:50%;
-  background:#ffffffaa;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-size:24px;
-  user-select:none;
+button{
+ width:70px;
+ height:70px;
+ border-radius:50%;
+ border:none;
+ background:rgba(255,255,255,0.8);
+ font-size:22px;
 }
 
-/* Pantallas */
-.screen{
-  position:absolute;
-  width:100%;
-  height:100%;
-  background:white;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  text-align:center;
-  flex-direction:column;
-  padding:20px;
+/* OVERLAY */
+.overlay{
+ position:absolute;
+ width:100%;
+ height:100%;
+ display:flex;
+ justify-content:center;
+ align-items:center;
+ flex-direction:column;
+ background:rgba(255,255,255,0.9);
+ text-align:center;
+ padding:20px;
 }
 
-/* Carta */
+.hidden{
+ display:none;
+}
+
+/* SOBRE */
 .envelope{
-  width:200px;
-  height:140px;
-  background:#e8d5b7;
-  border-radius:10px;
-  position:relative;
+ width:220px;
+ height:150px;
+ background:#f5d7b2;
+ border-radius:15px;
+ position:relative;
+ box-shadow:0 10px 20px rgba(0,0,0,0.2);
 }
 
 .heart{
-  position:absolute;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  font-size:30px;
-  cursor:pointer;
+ position:absolute;
+ top:50%;
+ left:50%;
+ transform:translate(-50%,-50%);
+ font-size:35px;
+ cursor:pointer;
+}
+
+.letter{
+ max-width:320px;
+ font-style:italic;
+ line-height:1.6;
 }
 </style>
 </head>
@@ -78,220 +85,225 @@ canvas{
 <canvas id="game"></canvas>
 
 <div class="controls">
-  <div class="btn" id="left">⬅️</div>
-  <div class="btn" id="jump">⬆️</div>
-  <div class="btn" id="right">➡️</div>
+  <button id="left">⬅️</button>
+  <button id="jump">⬆️</button>
+  <button id="right">➡️</button>
 </div>
 
-<div id="overlay" class="screen" style="display:none;"></div>
+<div id="overlay" class="overlay hidden"></div>
 
 <script>
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
+canvas.width = innerWidth;
+canvas.height = innerHeight;
 
-/* ====== PLAYER ====== */
+/* PLAYER */
+let lane = 1;
+let lanes = [canvas.width*0.25, canvas.width*0.5, canvas.width*0.75];
+
 let player = {
-  x:100,
-  y:300,
-  w:40,
-  h:40,
-  vy:0,
-  jumping:false
+ y: canvas.height-150,
+ vy:0,
+ jumping:false
 };
 
-let gravity = 0.8;
-let level = 1;
+let speed = 6;
 let obstacles = [];
-let flag = {x:2000,y:300};
+let distance = 0;
+let level = 1;
 
-/* ===== CONTROLES ===== */
-let keys = {left:false,right:false};
-
-document.getElementById("left").ontouchstart = ()=>keys.left=true;
-document.getElementById("left").ontouchend = ()=>keys.left=false;
-
-document.getElementById("right").ontouchstart = ()=>keys.right=true;
-document.getElementById("right").ontouchend = ()=>keys.right=false;
-
-document.getElementById("jump").ontouchstart = ()=>{
-  if(!player.jumping){
-    player.vy = -15;
-    player.jumping = true;
-  }
+/* CONTROLES */
+left.onclick = ()=>{ if(lane>0) lane--; }
+right.onclick = ()=>{ if(lane<2) lane++; }
+jump.onclick = ()=>{
+ if(!player.jumping){
+  player.vy=-15;
+  player.jumping=true;
+ }
 };
 
-/* ===== FONDOS ===== */
+/* OBSTÁCULOS */
+function spawnObstacle(){
+ let randomLane = Math.floor(Math.random()*3);
+ obstacles.push({
+  lane: randomLane,
+  y:-50
+ });
+}
+
+/* FONDO */
 function drawBackground(){
-  if(level==1){
-    ctx.fillStyle="#7ec850"; // bosque
-  }
-  if(level==2){
-    ctx.fillStyle="#e89c4f"; // otoño
-  }
-  if(level==3){
-    ctx.fillStyle="#1a1a3a"; // noche
-  }
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+ let grad = ctx.createLinearGradient(0,0,0,canvas.height);
+
+ if(level==1){
+  grad.addColorStop(0,"#a8edea");
+  grad.addColorStop(1,"#fed6e3");
+ }
+
+ if(level==2){
+  grad.addColorStop(0,"#ffd3a5");
+  grad.addColorStop(1,"#fd6585");
+ }
+
+ if(level==3){
+  grad.addColorStop(0,"#141e30");
+  grad.addColorStop(1,"#243b55");
+ }
+
+ ctx.fillStyle=grad;
+ ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 
-/* ===== DINO ===== */
+/* DINO */
 function drawPlayer(){
-  ctx.fillStyle="#4da6ff";
-  ctx.fillRect(player.x,player.y,player.w,player.h);
+ let x = lanes[lane];
 
-  ctx.fillStyle="white";
-  ctx.fillRect(player.x+5,player.y+5,10,10);
+ ctx.fillStyle="#6ec1ff";
+ ctx.beginPath();
+ ctx.roundRect(x-20, player.y, 40, 40, 12);
+ ctx.fill();
 
-  if(level==2){
-    ctx.fillStyle="green";
-    ctx.fillRect(player.x,player.y-10,40,10); // gorro
-  }
+ ctx.fillStyle="white";
+ ctx.beginPath();
+ ctx.arc(x+5, player.y+15, 8, 0, Math.PI*2);
+ ctx.fill();
+
+ ctx.fillStyle="black";
+ ctx.beginPath();
+ ctx.arc(x+7, player.y+15, 4, 0, Math.PI*2);
+ ctx.fill();
+
+ ctx.fillStyle="pink";
+ ctx.beginPath();
+ ctx.arc(x-5, player.y+25, 6, 0, Math.PI*2);
+ ctx.fill();
 }
 
-/* ===== OBSTÁCULOS ===== */
-function generateObstacles(){
-  obstacles=[];
-  for(let i=1;i<10;i++){
-    obstacles.push({
-      x:i*300+300,
-      y:300,
-      w:30,
-      h:30
-    });
+/* OBSTÁCULOS */
+function drawObstacles(){
+ for(let o of obstacles){
+  let x = lanes[o.lane];
+
+  ctx.fillStyle="#ff8fab";
+  ctx.beginPath();
+  ctx.arc(x, o.y, 15, 0, Math.PI*2);
+  ctx.fill();
+
+  o.y += speed;
+
+  if(o.y > canvas.height){
+   obstacles.shift();
   }
+
+  if(
+   Math.abs(x - lanes[lane]) < 30 &&
+   o.y > player.y &&
+   o.y < player.y + 40
+  ){
+   alert("perdiste 😭");
+   location.reload();
+  }
+ }
 }
 
-/* ===== UPDATE ===== */
+/* UPDATE */
 function update(){
-  if(keys.left) player.x-=5;
-  if(keys.right) player.x+=5;
+ distance++;
 
-  player.vy += gravity;
-  player.y += player.vy;
+ if(distance % 100 === 0){
+  spawnObstacle();
+ }
 
-  if(player.y>300){
-    player.y=300;
-    player.jumping=false;
-  }
+ if(distance % 2000 === 0){
+  level++;
+  showMessage();
+ }
 
-  // colisiones
-  for(let o of obstacles){
-    if(player.x < o.x+o.w &&
-       player.x+player.w > o.x &&
-       player.y < o.y+o.h &&
-       player.y+player.h > o.y){
-        alert("Perdiste 😭");
-        location.reload();
-    }
-  }
+ player.vy += 0.8;
+ player.y += player.vy;
 
-  // bandera
-  if(player.x > flag.x){
-    nextLevel();
-  }
+ if(player.y >= canvas.height-150){
+  player.y = canvas.height-150;
+  player.jumping=false;
+ }
+
+ speed += 0.001;
 }
 
-/* ===== DRAW ===== */
-function draw(){
-  drawBackground();
+/* MENSAJES */
+function showMessage(){
+ const overlay = document.getElementById("overlay");
+ overlay.classList.remove("hidden");
 
-  // suelo
-  ctx.fillStyle="#3b7d2a";
-  ctx.fillRect(0,340,canvas.width,100);
+ if(level==2){
+  overlay.innerHTML = `<h2>El tiempo pasa rápido... pero si estoy contigo no me molestaría mirarte hasta que el universo entero empiece a envejecer 💙</h2>`;
+ }
+ else if(level==3){
+  overlay.innerHTML = `<h2>ya falta poco para tu regalo... será lindo? 🎁</h2>`;
+ }
+ else{
+  finalScreen();
+  return;
+ }
 
-  // obstáculos
-  ctx.fillStyle="brown";
-  for(let o of obstacles){
-    ctx.fillRect(o.x,o.y,o.w,o.h);
-  }
-
-  // bandera
-  ctx.fillStyle="red";
-  ctx.fillRect(flag.x,260,20,80);
-
-  drawPlayer();
+ setTimeout(()=>overlay.classList.add("hidden"),4000);
 }
 
-/* ===== LOOP ===== */
-function gameLoop(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  update();
-  draw();
-  requestAnimationFrame(gameLoop);
+/* FINAL */
+function finalScreen(){
+ const overlay = document.getElementById("overlay");
+ overlay.innerHTML = `
+ <button onclick="openLetter()">continuar?</button>
+ <button onclick="location.reload()">salir</button>
+ `;
 }
 
-/* ===== NIVELES ===== */
-function nextLevel(){
-  const overlay = document.getElementById("overlay");
-
-  if(level==1){
-    overlay.style.display="flex";
-    overlay.innerHTML=`<h2>El tiempo pasa rápido...<br>pero contigo no importa 💙<br><br>Nivel 2</h2>`;
-    setTimeout(()=>{
-      overlay.style.display="none";
-      level=2;
-      player.x=100;
-      generateObstacles();
-    },3000);
-  }
-
-  else if(level==2){
-    overlay.style.display="flex";
-    overlay.innerHTML=`<h2>Ya falta poco para tu regalo 🎁<br><br>Nivel 3</h2>`;
-    setTimeout(()=>{
-      overlay.style.display="none";
-      level=3;
-      player.x=100;
-      generateObstacles();
-    },3000);
-  }
-
-  else if(level==3){
-    showFinal();
-  }
-}
-
-/* ===== FINAL ===== */
-function showFinal(){
-  const overlay = document.getElementById("overlay");
-  overlay.style.display="flex";
-
-  overlay.innerHTML=`
-  <h2>💖</h2>
-  <button onclick="continueGame()">Continuar</button>
-  <button onclick="location.reload()">Salir</button>
-  `;
-}
-
-function continueGame(){
-  const overlay = document.getElementById("overlay");
-
-  overlay.innerHTML=`
-  <div class="envelope">
-    <div class="heart" onclick="openLetter()">💌</div>
-  </div>
-  `;
-}
-
+/* CARTA */
 function openLetter(){
-  const overlay = document.getElementById("overlay");
+ const overlay = document.getElementById("overlay");
 
-  overlay.innerHTML=`
-  <p style="font-style:italic; font-size:18px;">
-  Sé que llevamos poco tiempo, pero me alegra muchísimo cumplir otro mes más a tu lado.<br><br>
-  Nunca imaginé entrar a trabajar a ese lugar y salir con la persona que más amo.<br><br>
-  Estar contigo se siente como una curita al corazón 💙<br><br>
-  Te amo, mi querido John.
-  </p>
-  `;
+ overlay.innerHTML = `
+ <div class="envelope">
+  <div class="heart" onclick="showLetter()">💌</div>
+ </div>
+ `;
 }
 
-/* INIT */
-generateObstacles();
-gameLoop();
+function showLetter(){
+ const overlay = document.getElementById("overlay");
+
+ overlay.innerHTML = `
+ <div class="letter">
+ Sé que llevamos poco tiempo, pero me alegra muchísimo cumplir otro mes más a tu lado.<br><br>
+
+ Nunca imaginé entrar a trabajar a ese lugar y salir de ahí con la persona que más amo.<br><br>
+
+ Estar contigo se siente como una curita al corazón que alegra cada momento de mi vida.<br><br>
+
+ Eres una persona muy bella aunque tu no te lo creas, bello por dentro y por fuera.<br><br>
+
+ Si pudiera te meteria en mi bolsillo y te llevaría siempre conmigo para cuidarte de lo que sea.<br><br>
+
+ No existen palabras suficientes para decir cuánto te amo, mi querido John.
+ </div>
+ `;
+}
+
+/* LOOP */
+function loop(){
+ ctx.clearRect(0,0,canvas.width,canvas.height);
+
+ drawBackground();
+ update();
+ drawPlayer();
+ drawObstacles();
+
+ requestAnimationFrame(loop);
+}
+
+loop();
 </script>
 
 </body>
