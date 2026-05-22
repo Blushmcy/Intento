@@ -3,79 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dino Love Runner 💙</title>
+<title>Dino Love 💙</title>
 
 <style>
-body{
- margin:0;
- overflow:hidden;
- font-family:'Segoe UI', sans-serif;
-}
+body{margin:0;overflow:hidden;font-family:sans-serif;}
+canvas{display:block;}
 
-canvas{
- display:block;
-}
-
-/* CONTROLES */
 .controls{
  position:fixed;
- bottom:20px;
+ bottom:10px;
  width:100%;
  display:flex;
  justify-content:space-between;
- padding:0 30px;
+ padding:0 20px;
 }
 
 button{
- width:70px;
- height:70px;
- border-radius:50%;
- border:none;
- background:rgba(255,255,255,0.8);
- font-size:22px;
+ width:65px;height:65px;border-radius:50%;
+ border:none;background:#ffffffcc;font-size:20px;
 }
 
 /* OVERLAY */
 .overlay{
  position:absolute;
- width:100%;
- height:100%;
+ width:100%;height:100%;
+ background:white;
  display:flex;
  justify-content:center;
  align-items:center;
  flex-direction:column;
- background:rgba(255,255,255,0.9);
  text-align:center;
  padding:20px;
 }
 
-.hidden{
- display:none;
-}
+.hidden{display:none;}
 
-/* SOBRE */
 .envelope{
- width:220px;
- height:150px;
+ width:220px;height:150px;
  background:#f5d7b2;
- border-radius:15px;
+ border-radius:12px;
  position:relative;
- box-shadow:0 10px 20px rgba(0,0,0,0.2);
 }
 
 .heart{
  position:absolute;
- top:50%;
- left:50%;
+ top:50%;left:50%;
  transform:translate(-50%,-50%);
- font-size:35px;
+ font-size:30px;
  cursor:pointer;
 }
 
 .letter{
- max-width:320px;
  font-style:italic;
- line-height:1.6;
+ max-width:300px;
 }
 </style>
 </head>
@@ -85,9 +65,9 @@ button{
 <canvas id="game"></canvas>
 
 <div class="controls">
-  <button id="left">⬅️</button>
-  <button id="jump">⬆️</button>
-  <button id="right">➡️</button>
+<button id="left">⬅️</button>
+<button id="jump">⬆️</button>
+<button id="right">➡️</button>
 </div>
 
 <div id="overlay" class="overlay hidden"></div>
@@ -100,161 +80,169 @@ canvas.width = innerWidth;
 canvas.height = innerHeight;
 
 /* PLAYER */
-let lane = 1;
-let lanes = [canvas.width*0.25, canvas.width*0.5, canvas.width*0.75];
+let player={x:100,y:300,w:40,h:40,vy:0,jumping:false};
+let gravity=0.8;
+let level=1;
+let cameraX=0;
 
-let player = {
- y: canvas.height-150,
- vy:0,
- jumping:false
-};
-
-let speed = 6;
-let obstacles = [];
-let distance = 0;
-let level = 1;
+let obstacles=[];
+let flag={x:1200,y:300};
 
 /* CONTROLES */
-left.onclick = ()=>{ if(lane>0) lane--; }
-right.onclick = ()=>{ if(lane<2) lane++; }
-jump.onclick = ()=>{
+let keys={left:false,right:false};
+
+left.onclick=()=>keys.left=true;
+right.onclick=()=>keys.right=true;
+
+setInterval(()=>{keys.left=false;keys.right=false},100);
+
+jump.onclick=()=>{
  if(!player.jumping){
   player.vy=-15;
   player.jumping=true;
  }
 };
 
-/* OBSTÁCULOS */
-function spawnObstacle(){
- let randomLane = Math.floor(Math.random()*3);
- obstacles.push({
-  lane: randomLane,
-  y:-50
- });
+/* GENERAR */
+function generate(){
+ obstacles=[];
+ flag.x=1200;
+
+ for(let i=1;i<7;i++){
+  let type;
+
+  if(level==1) type="bush";
+  if(level==2) type=(i%2==0)?"chicken":"rabbit";
+  if(level==3) type="light";
+
+  obstacles.push({x:i*180+200,y:300,type});
+ }
 }
 
-/* FONDO */
-function drawBackground(){
- let grad = ctx.createLinearGradient(0,0,0,canvas.height);
-
+/* FONDOS */
+function background(){
  if(level==1){
-  grad.addColorStop(0,"#a8edea");
-  grad.addColorStop(1,"#fed6e3");
+  ctx.fillStyle="#9be7a5"; // bosque
  }
-
  if(level==2){
-  grad.addColorStop(0,"#ffd3a5");
-  grad.addColorStop(1,"#fd6585");
+  ctx.fillStyle="#ffb07c"; // otoño
  }
-
  if(level==3){
-  grad.addColorStop(0,"#141e30");
-  grad.addColorStop(1,"#243b55");
+  ctx.fillStyle="#1e1e3f"; // noche
  }
 
- ctx.fillStyle=grad;
  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+ // detalles
+ for(let i=0;i<20;i++){
+  ctx.fillStyle="pink";
+  ctx.fillRect(i*100-cameraX*0.3,350,5,5);
+ }
 }
 
-/* DINO */
+/* DINO PIXEL */
 function drawPlayer(){
- let x = lanes[lane];
+ let x=player.x-cameraX;
 
  ctx.fillStyle="#6ec1ff";
- ctx.beginPath();
- ctx.roundRect(x-20, player.y, 40, 40, 12);
- ctx.fill();
+ ctx.fillRect(x,player.y,40,40);
 
  ctx.fillStyle="white";
- ctx.beginPath();
- ctx.arc(x+5, player.y+15, 8, 0, Math.PI*2);
- ctx.fill();
+ ctx.fillRect(x+10,player.y+10,12,12);
 
  ctx.fillStyle="black";
- ctx.beginPath();
- ctx.arc(x+7, player.y+15, 4, 0, Math.PI*2);
- ctx.fill();
-
- ctx.fillStyle="pink";
- ctx.beginPath();
- ctx.arc(x-5, player.y+25, 6, 0, Math.PI*2);
- ctx.fill();
+ ctx.fillRect(x+14,player.y+14,5,5);
 }
 
 /* OBSTÁCULOS */
 function drawObstacles(){
  for(let o of obstacles){
-  let x = lanes[o.lane];
+  let x=o.x-cameraX;
 
-  ctx.fillStyle="#ff8fab";
-  ctx.beginPath();
-  ctx.arc(x, o.y, 15, 0, Math.PI*2);
-  ctx.fill();
-
-  o.y += speed;
-
-  if(o.y > canvas.height){
-   obstacles.shift();
+  if(o.type=="bush"){
+   ctx.fillStyle="green";
+   ctx.fillRect(x,o.y,30,30);
   }
 
-  if(
-   Math.abs(x - lanes[lane]) < 30 &&
-   o.y > player.y &&
-   o.y < player.y + 40
-  ){
-   alert("perdiste 😭");
-   location.reload();
+  if(o.type=="chicken"){
+   ctx.fillStyle="white";
+   ctx.fillRect(x,o.y,30,30);
+  }
+
+  if(o.type=="rabbit"){
+   ctx.fillStyle="pink";
+   ctx.fillRect(x,o.y,30,30);
+  }
+
+  if(o.type=="light"){
+   ctx.fillStyle="yellow";
+   ctx.fillRect(x,o.y,30,30);
   }
  }
+}
+
+/* BANDERA */
+function drawFlag(){
+ let x=flag.x-cameraX;
+ ctx.fillStyle="red";
+ ctx.fillRect(x,220,10,100);
 }
 
 /* UPDATE */
 function update(){
- distance++;
 
- if(distance % 100 === 0){
-  spawnObstacle();
- }
+ if(keys.left) player.x-=5;
+ if(keys.right) player.x+=5;
 
- if(distance % 2000 === 0){
-  level++;
-  showMessage();
- }
+ player.vy+=gravity;
+ player.y+=player.vy;
 
- player.vy += 0.8;
- player.y += player.vy;
-
- if(player.y >= canvas.height-150){
-  player.y = canvas.height-150;
+ if(player.y>300){
+  player.y=300;
   player.jumping=false;
  }
 
- speed += 0.001;
+ cameraX=player.x-150;
+
+ for(let o of obstacles){
+  if(player.x<o.x+30 && player.x+40>o.x &&
+     player.y<o.y+30 && player.y+40>o.y){
+   alert("perdiste 😭");
+   location.reload();
+  }
+ }
+
+ if(player.x>flag.x){
+  nextLevel();
+ }
 }
 
-/* MENSAJES */
-function showMessage(){
- const overlay = document.getElementById("overlay");
- overlay.classList.remove("hidden");
+/* NIVELES */
+function nextLevel(){
+ let o=document.getElementById("overlay");
+ o.classList.remove("hidden");
 
- if(level==2){
-  overlay.innerHTML = `<h2>El tiempo pasa rápido... pero si estoy contigo no me molestaría mirarte hasta que el universo entero empiece a envejecer 💙</h2>`;
+ if(level==1){
+  o.innerHTML=`<h2>El tiempo pasa rápido... pero si estoy contigo no me molestaría mirarte hasta que el universo entero empiece a envejecer 💙<br><br>Nivel 2</h2>`;
+  setTimeout(()=>{level=2;player.x=100;o.classList.add("hidden");generate();},4000);
  }
- else if(level==3){
-  overlay.innerHTML = `<h2>ya falta poco para tu regalo... será lindo? 🎁</h2>`;
+
+ else if(level==2){
+  o.innerHTML=`<h2>ya falta poco para tu regalo, será lindo?<br><br>Nivel 3</h2>`;
+  setTimeout(()=>{level=3;player.x=100;o.classList.add("hidden");generate();},4000);
  }
+
  else{
-  finalScreen();
-  return;
+  final();
  }
-
- setTimeout(()=>overlay.classList.add("hidden"),4000);
 }
 
 /* FINAL */
-function finalScreen(){
- const overlay = document.getElementById("overlay");
- overlay.innerHTML = `
+function final(){
+ let o=document.getElementById("overlay");
+ o.classList.remove("hidden");
+
+ o.innerHTML=`
  <button onclick="openLetter()">continuar?</button>
  <button onclick="location.reload()">salir</button>
  `;
@@ -262,9 +250,9 @@ function finalScreen(){
 
 /* CARTA */
 function openLetter(){
- const overlay = document.getElementById("overlay");
+ let o=document.getElementById("overlay");
 
- overlay.innerHTML = `
+ o.innerHTML=`
  <div class="envelope">
   <div class="heart" onclick="showLetter()">💌</div>
  </div>
@@ -272,9 +260,9 @@ function openLetter(){
 }
 
 function showLetter(){
- const overlay = document.getElementById("overlay");
+ let o=document.getElementById("overlay");
 
- overlay.innerHTML = `
+ o.innerHTML=`
  <div class="letter">
  Sé que llevamos poco tiempo, pero me alegra muchísimo cumplir otro mes más a tu lado.<br><br>
 
@@ -282,11 +270,11 @@ function showLetter(){
 
  Estar contigo se siente como una curita al corazón que alegra cada momento de mi vida.<br><br>
 
- Eres una persona muy bella aunque tu no te lo creas, bello por dentro y por fuera.<br><br>
+ Eres una persona muy bella, aunque a veces no te lo creas; bello por dentro y por fuera.<br><br>
 
- Si pudiera te meteria en mi bolsillo y te llevaría siempre conmigo para cuidarte de lo que sea.<br><br>
+ Si pudiera, te metería en mi bolsillo para llevarte a donde sea y cuidarte de todo lo que hay afuera.<br><br>
 
- No existen palabras suficientes para decir cuánto te amo, mi querido John.
+ No existen palabras suficientes para completar lo mucho que te amo, mi querido John.
  </div>
  `;
 }
@@ -295,14 +283,17 @@ function showLetter(){
 function loop(){
  ctx.clearRect(0,0,canvas.width,canvas.height);
 
- drawBackground();
+ background();
  update();
  drawPlayer();
  drawObstacles();
+ drawFlag();
 
  requestAnimationFrame(loop);
 }
 
+/* INIT */
+generate();
 loop();
 </script>
 
